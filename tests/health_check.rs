@@ -1,6 +1,6 @@
 use std::net::TcpListener;
 use newsletter::startup::run;
-use sqlx::{Connection, PgConnection};
+use sqlx::{ PgPool,query};
 use newsletter::configuration::get_configuration;
 
 #[tokio::test]
@@ -16,11 +16,15 @@ async fn health_check_works(){
    assert!(response.status().is_success());
    assert_eq!(Some(0),response.content_length());
 }
+
 #[tokio::test]
 async fn subscribe_returns_200_for_valid_form_data(){
     let address =spawn_app()
        .await;
     let client = reqwest::Client::new();
+    let configuration = get_configuration().expect("Failed to read configuration.");
+    let mut connection = PgPool::connect(&configuration.database.connection_string())
+        .await.expect("connection error");
 
     let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
     let response = client
@@ -66,12 +70,18 @@ async fn subscribe_returns_400_for_valid_form_data(){
 async fn spawn_app() -> String{ 
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
     let port = listener.local_addr().unwrap().port();
-  let configuration = get_configuration().expect("Failed to read configuration.");
-    let connection = PgConnection::connect(&configuration.database.connection_string())
-        .await
-        .expect("Failed to connect to Postgres.");
-    println!("port: {}",port);
-    let server = run(listener,connection).expect("expected to bind address");
-    let _ = tokio::spawn(server);
-    format!("http://127.0.0.1:{}",port)
+    let configuration = get_configuration().expect("Failed to read configuration.");
+    let connection = PgPool::connect(&configuration.database.connection_string())
+        .await;
+    match connection {
+        Ok(connection) => {
+            println!("port: {}",port);
+            let server = run(listener,connection).expect("expected to bind address");
+            let _ = tokio::spawn(server);
+            format!("http://127.0.0.1:{}",port)
+        },
+        Err(_) =>{
+            panic!("Failed to connect to Postgres.")
+        }
+    }
 }
