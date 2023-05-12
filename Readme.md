@@ -1,0 +1,1 @@
+# Newsletter server with Rust
