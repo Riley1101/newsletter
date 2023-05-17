@@ -1,12 +1,26 @@
 use std::net::TcpListener;
+use once_cell::sync::Lazy;
 use newsletter::{startup::run, configuration::DatabaseSettings};
 use newsletter::configuration::get_configuration;
+use newsletter::telemetry::{get_subscriber, init_subscriber};
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
 pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
 }
+
+static TRACING: Lazy<()> = Lazy::new(|| {
+    let default_filter_level = "info".to_string();
+    let subscriber_name = "test".to_string();
+    if std::env::var("TEST_LOG").is_ok(){
+        let subscriber = get_subscriber("test".into(), "debug".into(),std::io::stdout);
+        init_subscriber(subscriber);
+    }else{
+        let subscriber = get_subscriber(subscriber_name.into(),default_filter_level.into(),std::io::sink);
+        init_subscriber(subscriber);
+    }
+});
 
 #[tokio::test]
 async fn health_check_works(){
@@ -75,6 +89,7 @@ async fn subscribe_returns_400_for_valid_form_data(){
 }
 
 async fn spawn_app() -> TestApp{ 
+    Lazy::force(&TRACING);
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
     let port = listener.local_addr().unwrap().port();
     let mut configuration = get_configuration().expect("Failed to read configuration.");
