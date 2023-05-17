@@ -2,7 +2,6 @@ use std::net::TcpListener;
 use newsletter::{startup::run, configuration::DatabaseSettings};
 use newsletter::configuration::get_configuration;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
-use uuid::Uuid;
 pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
@@ -77,21 +76,26 @@ async fn subscribe_returns_400_for_valid_form_data(){
 async fn spawn_app() -> TestApp{ 
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
     let port = listener.local_addr().unwrap().port();
-    let mut configuration = get_configuration().expect("Failed to read configuration.");
-    configuration.database.database_name = Uuid::new_v4().to_string();
+    let configuration = get_configuration().expect("Failed to read configuration.");
     let connection = configue_database(&configuration.database).await;
-    let db_pool = connection;
-    println!("port: {}",port);
-    let server = run(listener,db_pool.clone()).expect("expected to bind address");
-    let _ = tokio::spawn(server);
-    let address = format!("http://127.0.0.1:{}",port);
-    TestApp{
-        address,
-        db_pool, 
+    match connection {
+        Ok(db_pool) => {
+            println!("port: {}",port);
+            let server = run(listener,db_pool.clone()).expect("expected to bind address");
+            let _ = tokio::spawn(server);
+            let address = format!("http://127.0.0.1:{}",port);
+            TestApp{
+                address,
+                db_pool, 
+            }
+        },
+        Err(_) =>{
+            panic!("Failed to connect to Postgres.")
+        }
     }
 }
 
-pub(crate) async fn configue_database(config:&DatabaseSettings) ->PgPool{
+pub async fn configue_database(config:&DatabaseSettings) ->PgPool{
     let mut connection = PgConnection::connect(&config.connection_string_without_db())
         .await
         .expect("Failed to connect to Postgres.");
@@ -102,12 +106,13 @@ pub(crate) async fn configue_database(config:&DatabaseSettings) ->PgPool{
     let connection_pool = PgPool::connect(&config.connection_string()).await;
     match connection_pool {
         Ok(pool) => {
+
             sqlx::migrate!("./migrations")
-                .run(&pool)
+                .run(&connection_pool)
                 .await
                 .expect("Failed to migrate database.");
-            pool
         },
-        Err(_) => panic!("migration error"),
+        Err(_) => todo!(),
     }
+    connection_pool
 }
