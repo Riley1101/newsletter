@@ -3,6 +3,7 @@ use once_cell::sync::Lazy;
 use newsletter::{startup::run, configuration::DatabaseSettings};
 use newsletter::configuration::get_configuration;
 use newsletter::telemetry::{get_subscriber, init_subscriber};
+use secrecy::ExposeSecret;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
 pub struct TestApp {
@@ -107,14 +108,14 @@ async fn spawn_app() -> TestApp{
 }
 
 pub(crate) async fn configue_database(config:&DatabaseSettings) ->PgPool{
-    let mut connection = PgConnection::connect(&config.connection_string_without_db())
+    let mut connection = PgConnection::connect(&config.connection_string_without_db().expose_secret())
         .await
         .expect("Failed to connect to Postgres.");
     connection
         .execute(&*format!(r#"CREATE DATABASE "{}";"#,config.database_name).as_str())
         .await
         .expect("Failed to create database.");
-    let connection_pool = PgPool::connect(&config.connection_string()).await;
+    let connection_pool = PgPool::connect(&config.connection_string().expose_secret()).await;
     match connection_pool {
         Ok(pool) => {
             sqlx::migrate!("./migrations")
