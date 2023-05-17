@@ -35,7 +35,7 @@ async fn subscribe_returns_200_for_valid_form_data(){
         .send()
         .await
         .expect("Failed to execute request");
-    let saved = sqlx::query!("SELECT email, name FROM subscriptions",)
+    let _ = sqlx::query!("SELECT email, name FROM subscriptions",)
         .fetch_one(&app.db_pool)
         .await
         .expect("Failed to fetch saved subscription.");
@@ -61,7 +61,7 @@ async fn subscribe_returns_400_for_valid_form_data(){
             .send()
             .await
             .expect("Failed to execute request.");
-        let saved = sqlx::query!("SELECT email, name FROM subscriptions",)
+        let _ = sqlx::query!("SELECT email, name FROM subscriptions",)
             .fetch(&app.db_pool);
         // Assert
         assert_eq!(
