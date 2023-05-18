@@ -1,6 +1,10 @@
 target
 .env
 .env.local
+*.yaml
+base.yaml
+production.yaml
+local.yaml
 configuration.yaml
 configuration.yaml
 
