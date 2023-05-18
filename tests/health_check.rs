@@ -3,7 +3,6 @@ use once_cell::sync::Lazy;
 use newsletter::{startup::run, configuration::DatabaseSettings};
 use newsletter::configuration::get_configuration;
 use newsletter::telemetry::{get_subscriber, init_subscriber};
-use secrecy::ExposeSecret;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
 pub struct TestApp {
@@ -42,7 +41,7 @@ async fn subscribe_returns_200_for_valid_form_data(){
     let app =spawn_app()
        .await;
     let client = reqwest::Client::new();
-    let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
+    let body = "name=%20guin&email=ursula_le_guin%40gmail.com";
     let response = client
         .post(&format!("{}/subscriptions", &app.address))
         .header("Content-Type","application/x-www-form-urlencoded")
@@ -56,6 +55,33 @@ async fn subscribe_returns_200_for_valid_form_data(){
         .expect("Failed to fetch saved subscription.");
 
     assert_eq!(200,response.status().as_u16());
+}
+
+#[tokio::test]
+async fn subscribe_returns_400_when_fields_present_but_invalid(){
+    let app =spawn_app()
+        .await;
+    let client = reqwest::Client::new();
+    let test_cases = vec![
+      ("name=Ursula&email=", "empty email"),
+      ("name=Ursula&email=definitely-not-an-email", "invalid email"),
+   ];
+
+    for (body, description) in test_cases{
+        let response = client
+            .post(&format!("{}/subscriptions", &app.address))
+            .header("Content-Type","application/x-www-form-urlencoded")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to execute request");
+        assert_eq!(
+            400,
+            response.status().as_u16(),
+            "api did not return 400 when the payload was {}",description
+        )
+    }
+
 }
 
 #[tokio::test]
@@ -108,22 +134,19 @@ async fn spawn_app() -> TestApp{
 }
 
 pub(crate) async fn configue_database(config:&DatabaseSettings) ->PgPool{
-    let mut connection = PgConnection::connect(&config.connection_string_without_db().expose_secret())
+    let mut connection = PgConnection::connect_with(&config.without_db())
         .await
         .expect("Failed to connect to Postgres.");
     connection
         .execute(&*format!(r#"CREATE DATABASE "{}";"#,config.database_name).as_str())
         .await
         .expect("Failed to create database.");
-    let connection_pool = PgPool::connect(&config.connection_string().expose_secret()).await;
-    match connection_pool {
-        Ok(pool) => {
-            sqlx::migrate!("./migrations")
-                .run(&pool)
-                .await
-                .expect("Failed to migrate database.");
-            pool
-        },
-        Err(_) => panic!("migration error"),
-    }
+    let connection_pool = PgPool::connect_with(config.with_db()).await.expect("failed to connect to postgres");
+    sqlx::migrate!("./migrations")
+        .run(&connection_pool)
+        .await
+        .expect("Failed to migrate database.");
+    
+    connection_pool
 }
+
