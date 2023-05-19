@@ -1,4 +1,5 @@
 use std::net::TcpListener;
+use newsletter::email_client::EmailClient;
 use once_cell::sync::Lazy;
 use newsletter::{startup::run, configuration::DatabaseSettings};
 use newsletter::configuration::get_configuration;
@@ -122,9 +123,14 @@ async fn spawn_app() -> TestApp{
     let mut configuration = get_configuration().expect("Failed to read configuration.");
     configuration.database.database_name = Uuid::new_v4().to_string();
     let connection = configue_database(&configuration.database).await;
+    let sender_email = configuration.email_client.sender().expect("Invalid sender email address");
     let db_pool = connection;
     println!("port: {}",port);
-    let server = run(listener,db_pool.clone()).expect("expected to bind address");
+    let email_client = EmailClient::new(
+        configuration.email_client.base_url,
+        sender_email,
+    );
+    let server = run(listener,db_pool.clone(),email_client).expect("expected to bind address");
     let _ = tokio::spawn(server);
     let address = format!("http://127.0.0.1:{}",port);
     TestApp{
