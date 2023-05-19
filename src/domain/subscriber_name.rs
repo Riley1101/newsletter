@@ -1,6 +1,5 @@
-use std::format;
-
 use unicode_segmentation::UnicodeSegmentation;
+
 #[derive(Debug)]
 pub struct SubscriberName(String);
 
@@ -31,11 +30,6 @@ impl AsRef<str> for SubscriberName {
     fn as_ref(&self) -> &str {
         &self.0
     }
-}
-
-pub struct NewSubscriber {
-    pub email: String,
-    pub name: SubscriberName,
 }
 
 #[cfg(test)]
