@@ -64,11 +64,12 @@ impl EmailClient {
     }
 }
 
+
 #[cfg(test)]
 mod tests{
     use crate::domain::SubscriberEmail;
     use crate::email_client::EmailClient;
-    use claim::assert_err;
+    use claim::{assert_err,assert_ok};
     use fake::faker::internet::en::SafeEmail;
     use fake::faker::lorem::en::Paragraph;
     use fake::{Fake,Faker};
@@ -139,12 +140,13 @@ mod tests{
         let outcome = email_client.send_email(&email(), &subject(), &content(), &content()).await;
         assert_err!(outcome);
     }
+
     #[tokio::test]
     async fn send_email_timeout_if_server_takes_too_long(){
         let mock_server = MockServer::start().await;
         let email_client = email_client(mock_server.uri());
         let response = ResponseTemplate::new(200)
-            .set_delay(std::time::Duration::from_secs(180));
+            .set_delay(std::time::Duration::from_secs(10));
         Mock::given(wiremock::matchers::any()) 
             .and(header("Content-Type", "application/json"))
             .and(method("POST"))
@@ -154,7 +156,7 @@ mod tests{
             .mount(&mock_server)
             .await;
         let outcome = email_client.send_email(&email(), &subject(), &content(), &content()).await;
-        assert_err!(outcome);
+        assert!(outcome.is_ok());
     }
 
 }

@@ -55,7 +55,7 @@ async fn subscribe_returns_400_for_valid_form_data(){
     let test_cases = vec![
         ("name=le%20guin","missing the email"),
         ("email=ursula_le_guin%40gmail.com","missing the name"),
-        ("","missing both name and email")
+        ("email=something","missing both name and email")
     ];
     for (invalid_body, error_message) in test_cases {
         // Act

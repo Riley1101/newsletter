@@ -47,11 +47,15 @@ impl TryFrom<FormData> for NewSubscriber{
 }
 
 pub async fn subscribe(form:web::Form<FormData>,pool:web::Data<PgPool>) ->HttpResponse{
-    let new_subscriber = match form.0.try_into() {
-        Ok(subscriber) => subscriber,
-        Err(_) => return HttpResponse::BadRequest().finish(),
+    let name = match SubscriberName::parse(form.0.name){
+        Ok(name) => name,
+        Err(err) => return HttpResponse::BadRequest().body(err.to_string()),
     };
-        
+    let email = match SubscriberEmail::parse(form.0.email) {
+        Ok(email) => email,
+        Err(err) => return HttpResponse::BadRequest().body(err.to_string()),
+    };
+    let new_subscriber = NewSubscriber { email, name } ;
     match insert_subscriber(&pool, &new_subscriber).await {
        Ok(_) => HttpResponse::Ok().finish(),
        Err(_) => HttpResponse::InternalServerError().finish(),
