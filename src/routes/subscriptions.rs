@@ -5,6 +5,7 @@ use chrono::Utc;
 use uuid::Uuid;
 use tracing;
 use crate::domain::{SubscriberName,NewSubscriber, SubscriberEmail};
+use crate::email_client::{EmailClient, self};
 
 #[derive(serde::Deserialize)]
 #[derive(Debug)]
@@ -15,14 +16,39 @@ pub struct FormData {
 
 #[tracing::instrument(
     name = "Saving new subscriber details in the database",
-    skip(new_subscriber, pool)
+    skip(new_subscriber, pool,email_client)
+    fields(
+        subscriber_email = %new_subscriber.email,
+        subscriber_name = %new_subscriber.name
+    )
 )]
-pub async fn insert_subscriber(pool:&PgPool, new_subscriber: &NewSubscriber) -> Result<(), sqlx::Error>{
+pub async fn subscribe(form:web::Form<FormData>,pool:web::Data<PgPool>, email_client:web::Data<EmailClient>) ->HttpResponse{
+    let name = match SubscriberName::parse(form.0.name){
+        Ok(name) => name,
+        Err(err) => return HttpResponse::BadRequest().body(err.to_string()),
+    };
+    let email = match SubscriberEmail::parse(form.0.email) {
+        Ok(email) => email,
+        Err(err) => return HttpResponse::BadRequest().body(err.to_string()),
+    };
+    let new_subscriber = NewSubscriber { email, name } ;
+
+    match insert_subscriber(&pool, &new_subscriber).await {
+       Ok(_) => HttpResponse::Ok().finish(),
+       Err(_) => HttpResponse::InternalServerError().finish(),
+    };
+    if email_client.send_email(&new_subscriber.email, "welcom", "welcoem", "welcome").await.is_err(){
+        return HttpResponse::InternalServerError().finish();
+    }
+    HttpResponse::Ok().finish()
+}
+
+pub async fn insert_subscriber(pool:&PgPool, new_subscriber: &NewSubscriber,) -> Result<(), sqlx::Error>{
     let request_id = Uuid::new_v4();
     sqlx::query!(
         r#"
-        INSERT INTO subscriptions (id, email, name, subscribed_at)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO subscriptions (id, email, name, subscribed_at, status)
+        VALUES ($1, $2, $3, $4, 'confirmed')
         "#,
         request_id,
         new_subscriber.email.as_ref(),
@@ -46,19 +72,4 @@ impl TryFrom<FormData> for NewSubscriber{
     }
 }
 
-pub async fn subscribe(form:web::Form<FormData>,pool:web::Data<PgPool>) ->HttpResponse{
-    let name = match SubscriberName::parse(form.0.name){
-        Ok(name) => name,
-        Err(err) => return HttpResponse::BadRequest().body(err.to_string()),
-    };
-    let email = match SubscriberEmail::parse(form.0.email) {
-        Ok(email) => email,
-        Err(err) => return HttpResponse::BadRequest().body(err.to_string()),
-    };
-    let new_subscriber = NewSubscriber { email, name } ;
-    match insert_subscriber(&pool, &new_subscriber).await {
-       Ok(_) => HttpResponse::Ok().finish(),
-       Err(_) => HttpResponse::InternalServerError().finish(),
-    }
-}
 

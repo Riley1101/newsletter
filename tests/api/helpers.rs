@@ -1,11 +1,13 @@
 use std::net::TcpListener;
+use std::println;
 use newsletter::email_client::EmailClient;
 use once_cell::sync::Lazy;
 use newsletter::{startup::run, configuration::DatabaseSettings};
-use newsletter::configuration::get_configuration;
+use newsletter::configuration::{get_configuration, self};
 use newsletter::telemetry::{get_subscriber, init_subscriber};
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
+use wiremock::MockServer;
 
 
 // make sure tracing only run once
@@ -24,6 +26,7 @@ static TRACING: Lazy<()> = Lazy::new(|| {
 pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
+    pub email_server : MockServer,
 }
 
 pub async fn spawn_app() -> TestApp{ 
@@ -39,12 +42,19 @@ pub async fn spawn_app() -> TestApp{
     
     let timeout = configuration.email_client.timeout();
     let email_client = EmailClient::new(configuration.email_client.base_url,sender_email,configuration.email_client.authorization_token,timeout);
+    let email_server = MockServer::start().await;
     let server = run(listener,db_pool.clone(),email_client).expect("expected to bind address");
     let _ = tokio::spawn(server);
     let address = format!("http://127.0.0.1:{}",port);
+    let configuration = {
+        let mut c = get_configuration().expect("failed to read configuration");
+        c.email_client.base_url = email_server.uri();
+    };
+    println!("address: {:?}",configuration);
     TestApp{
         address,
         db_pool, 
+        email_server
     }
 }
 
