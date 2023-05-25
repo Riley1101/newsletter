@@ -1,5 +1,5 @@
 use std::net::TcpListener;
-use std::println;
+use std::{println, format};
 use newsletter::email_client::EmailClient;
 use once_cell::sync::Lazy;
 use newsletter::{startup::run, configuration::DatabaseSettings};
@@ -27,6 +27,18 @@ pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
     pub email_server : MockServer,
+}
+
+impl TestApp {
+    pub async fn post_subscriptions(&self, body:String) -> reqwest::Response{
+       reqwest::Client::new()
+           .post(&format!("{}/subscriptions",self.address))
+           .header("Content-Type","application/x-www-form-urlencoded")
+           .body(body)
+           .send()
+           .await
+           .expect("Failed to execute request.")
+    }
 }
 
 pub async fn spawn_app() -> TestApp{ 

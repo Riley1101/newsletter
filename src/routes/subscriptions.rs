@@ -1,3 +1,5 @@
+use std::println;
+
 use actix_web::{web, HttpResponse};
 use serde;
 use sqlx::PgPool;
@@ -5,7 +7,7 @@ use chrono::Utc;
 use uuid::Uuid;
 use tracing;
 use crate::domain::{SubscriberName,NewSubscriber, SubscriberEmail};
-use crate::email_client::{EmailClient, self};
+use crate::email_client::EmailClient; 
 
 #[derive(serde::Deserialize)]
 #[derive(Debug)]
@@ -16,10 +18,10 @@ pub struct FormData {
 
 #[tracing::instrument(
     name = "Saving new subscriber details in the database",
-    skip(new_subscriber, pool,email_client)
+    skip( form,pool,email_client)
     fields(
-        subscriber_email = %new_subscriber.email,
-        subscriber_name = %new_subscriber.name
+        subscriber_email = %form.email,
+        subscriber_name = %form.name
     )
 )]
 pub async fn subscribe(form:web::Form<FormData>,pool:web::Data<PgPool>, email_client:web::Data<EmailClient>) ->HttpResponse{
@@ -35,10 +37,12 @@ pub async fn subscribe(form:web::Form<FormData>,pool:web::Data<PgPool>, email_cl
 
     match insert_subscriber(&pool, &new_subscriber).await {
        Ok(_) => HttpResponse::Ok().finish(),
-       Err(_) => HttpResponse::InternalServerError().finish(),
+       Err(err) => {
+            HttpResponse::Ok().finish()
+       },
     };
     if email_client.send_email(&new_subscriber.email, "welcom", "welcoem", "welcome").await.is_err(){
-        return HttpResponse::InternalServerError().finish();
+        println!("error is atsend email");
     }
     HttpResponse::Ok().finish()
 }

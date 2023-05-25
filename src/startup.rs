@@ -8,7 +8,6 @@ use tracing_actix_web::TracingLogger;
 
 pub fn run(
     listener: TcpListener,
-    // New parameter!
     db_pool: PgPool,
     email_client: EmailClient,
 ) -> Result<Server, std::io::Error> {
