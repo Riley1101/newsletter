@@ -1,0 +1,79 @@
+repo_name: Riley1101/newsletter_server
+report_id: 44318f7d8f033c8cad172fc28946adb1
+repo_type: Public
+timestamp: '2023-11-11T17:19:48+00:00'
+requested_by: Riley1101
+provider: github
+branch: main
+detected_tools_count: 7
+tools:
+- name: JavaScript
+  description: Lightweight, interpreted, object-oriented language with first-class
+    functions
+  website_url: https://developer.mozilla.org/en-US/docs/Web/JavaScript
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Languages
+  image_url: https://img.stackshare.io/service/1209/javascript.jpeg
+  detection_source: Cargo.toml
+  last_updated_by: Riley1101
+  last_updated_on: 2023-05-09 18:56:12.000000000 Z
+- name: Rust
+  description: A safe, concurrent, practical language
+  website_url: http://www.rust-lang.org/
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Languages
+  image_url: https://img.stackshare.io/service/1070/v7txhrjp9pdqrkdtxxp0.png
+  detection_source: Repo Metadata
+- name: SQL
+  description: It is a domain-specific language used in programming
+  website_url: https://en.wikipedia.org/wiki/SQL
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Languages
+  image_url: https://img.stackshare.io/service/2271/default_068d33483bba6b81ee13fbd4dc7aab9780896a54.png
+  detection_source: migrations/20230524221157_create_subscription_tokens_table.sql
+  last_updated_by: Riley1101
+  last_updated_on: 2023-05-10 16:15:40.000000000 Z
+- name: Docker
+  description: Enterprise Container Platform for High-Velocity Innovation.
+  website_url: https://www.docker.com/
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Build, Test, Deploy
+  sub_category: Virtual Machine Platforms & Containers
+  image_url: https://img.stackshare.io/service/586/n4u37v9t_400x400.png
+  detection_source: Repo Metadata
+- name: Git
+  description: Fast, scalable, distributed revision control system
+  website_url: http://git-scm.com/
+  open_source: true
+  hosted_saas: false
+  category: Build, Test, Deploy
+  sub_category: Version Control System
+  image_url: https://img.stackshare.io/service/1046/git.png
+  detection_source: Repo Metadata
+- name: npm
+  description: The package manager for JavaScript.
+  website_url: https://www.npmjs.com/
+  open_source: false
+  hosted_saas: false
+  category: Build, Test, Deploy
+  sub_category: Front End Package Manager
+  image_url: https://img.stackshare.io/service/1120/lejvzrnlpb308aftn31u.png
+  detection_source: Cargo.toml
+  last_updated_by: Riley1101
+  last_updated_on: 2023-05-09 18:56:12.000000000 Z
+- name: actix-web
+  website_url: https://github.com/actix/actix-web
+  open_source: false
+  hosted_saas: false
+  image_url: https://img.stackshare.io/service/10959/32776943.png
+  detection_source: Cargo.toml
+  last_updated_by: Riley1101
+  last_updated_on: 2023-05-17 20:43:28.000000000 Z
